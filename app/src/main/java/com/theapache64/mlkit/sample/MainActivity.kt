@@ -39,6 +39,8 @@ class MainActivity : AppCompatActivity() {
 
     private val visionOptions by lazy {
         FirebaseVisionFaceDetectorOptions.Builder()
+            .setPerformanceMode(FirebaseVisionFaceDetectorOptions.ACCURATE)
+            .setClassificationMode(FirebaseVisionFaceDetectorOptions.ALL_CLASSIFICATIONS)
             .setContourMode(FirebaseVisionFaceDetectorOptions.ALL_CONTOURS)
             .build()
     }
@@ -159,44 +161,41 @@ class MainActivity : AppCompatActivity() {
                     val rotY = face.headEulerAngleY // Head is rotated to the right rotY degrees
                     val rotZ = face.headEulerAngleZ // Head is tilted sideways rotZ degrees
 
-                    // Check eye diff
-                    val leftEye = face.getContour(FirebaseVisionFaceContour.LEFT_EYE)
-                    val leftEyeTop = leftEye.points[4]
-                    val leftEyeBottom = leftEye.points[12]
-                    val leftEyeDistance = getDistance(leftEyeTop, leftEyeBottom)
+                    val leftEyeProb = face.leftEyeOpenProbability
+                    val rightEyeProb = face.rightEyeOpenProbability
 
 
-                    val rightEye = face.getContour(FirebaseVisionFaceContour.RIGHT_EYE)
-                    val rightEyeTop = rightEye.points[4]
-                    val rightEyeBottom = rightEye.points[12]
-                    val rightEyeDistance = getDistance(rightEyeTop, rightEyeBottom)
+                    if (leftEyeProb > 0 && rightEyeProb > 0) {
 
-                    info("Eye distance : $leftEyeDistance : $rightEyeDistance")
+                        info("EYE CONTOUR: ${face.getContour(FirebaseVisionFaceContour.LEFT_EYE)}")
+                        info("EYE : $leftEyeProb:$rightEyeProb")
 
-                    if (leftEyeDistance <= 6 || rightEyeDistance <= 6) {
-                        if (eyeClosedTime == -1L) {
-                            info("Sleeping tracking started")
-                            eyeClosedTime = System.currentTimeMillis()
-                        }
+                        if (leftEyeProb <= 0.6 && rightEyeProb <= 0.6) {
+                            if (eyeClosedTime == -1L) {
+                                info("Sleeping tracking started")
+                                eyeClosedTime = System.currentTimeMillis()
+                            }
 
-                        if (eyeClosedTime != -1L) {
-                            // tracking active
-                            val diff = System.currentTimeMillis() - eyeClosedTime
-                            if (diff > 2000) {
-                                info("Sleeping...")
-                                showRed()
-                                sendMessage("Stop sleeping!!")
-                                continue
+                            if (eyeClosedTime != -1L) {
+                                // tracking active
+                                val diff = System.currentTimeMillis() - eyeClosedTime
+                                if (diff > 2000) {
+                                    info("Sleeping...")
+                                    showRed()
+                                    sendMessage("Stop sleeping!!")
+                                    continue
+                                }
+                            }
+
+
+                        } else {
+                            hideWarning()
+                            if (eyeClosedTime != -1L) {
+                                info("Sleeping tracking stopped")
+                                eyeClosedTime = -1
                             }
                         }
 
-
-                    } else {
-                        hideWarning()
-                        if (eyeClosedTime != -1L) {
-                            info("Sleeping tracking stopped")
-                            eyeClosedTime = -1
-                        }
                     }
 
 
@@ -204,22 +203,25 @@ class MainActivity : AppCompatActivity() {
                     val upperLipTop = face.getContour(FirebaseVisionFaceContour.UPPER_LIP_TOP)
                     val lowerLipBottom = face.getContour(FirebaseVisionFaceContour.LOWER_LIP_BOTTOM)
 
-                    val lipDistance = getDistance(upperLipTop, lowerLipBottom)
-                    info("Lip distance $lipDistance")
-                    if (lipDistance > 50) {
+                    if (upperLipTop.points.size == 11 && lowerLipBottom.points.size == 9) {
+                        val lipDistance = getDistance(upperLipTop, lowerLipBottom)
+                        info("Lip distance $lipDistance")
+                        if (lipDistance > 50) {
 
-                        info("Eye distance : $leftEyeDistance : $rightEyeDistance")
 
-                        if (leftEyeDistance < 6 || rightEyeDistance < 6) {
-                            info("Yawning...")
-                            showOrange()
-                            sendMessage("Stop yawning!!")
+                            if (leftEyeProb > 0 && rightEyeProb > 0) {
+                                if (leftEyeProb < 0.6 && rightEyeProb < 0.6) {
+                                    info("Yawning...")
+                                    showOrange()
+                                    sendMessage("Stop yawning!!")
+                                } else {
+                                    hideWarning()
+                                }
+                            }
+
                         } else {
                             hideWarning()
                         }
-
-                    } else {
-                        hideWarning()
                     }
 
                 }
@@ -287,8 +289,9 @@ class MainActivity : AppCompatActivity() {
         x: FirebaseVisionFaceContour,
         y: FirebaseVisionFaceContour
     ): Float {
-        val x1 = x.points[4]
-        val x2 = x.points[5]
+        val x1 = x.points[5]
+        val x2 = x.points[6]
+
         val y1 = y.points[4]
         val y2 = y.points[5]
 
