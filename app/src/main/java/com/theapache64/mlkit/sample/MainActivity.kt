@@ -10,10 +10,6 @@ import android.util.SparseIntArray
 import android.view.Surface
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
-import com.fitpolo.support.MokoSupport
-import com.fitpolo.support.callback.MokoOrderTaskCallback
-import com.fitpolo.support.entity.OrderTaskResponse
-import com.fitpolo.support.task.ZWriteCommonMessageTask
 import com.google.firebase.ml.vision.FirebaseVision
 import com.google.firebase.ml.vision.common.FirebaseVisionImage
 import com.google.firebase.ml.vision.common.FirebaseVisionImageMetadata
@@ -148,7 +144,7 @@ class MainActivity : AppCompatActivity() {
     private fun detectFrom(image: FirebaseVisionImage) {
         detector.detectInImage(image)
             .addOnSuccessListener { faces ->
-                info("Detection finished")
+
                 for (face in faces) {
 
                     val bounds = face.boundingBox
@@ -159,8 +155,8 @@ class MainActivity : AppCompatActivity() {
                     val lowerLipBottom = face.getContour(FirebaseVisionFaceContour.LOWER_LIP_BOTTOM)
 
                     val lipDistance = getDistance(upperLipTop, lowerLipBottom)
-                    if (lipDistance > 75) {
-
+                    info("Lip distance $lipDistance")
+                    if (lipDistance > 50) {
 
                         // Check eye diff
                         val leftEye = face.getContour(FirebaseVisionFaceContour.LEFT_EYE)
@@ -174,16 +170,57 @@ class MainActivity : AppCompatActivity() {
                         val rightEyeBottom = rightEye.points[12]
                         val rightEyeDistance = getDistance(rightEyeTop, rightEyeBottom)
 
+                        info("Eye distance : $leftEyeDistance : $rightEyeDistance")
+
                         if (leftEyeDistance < 10 && rightEyeDistance < 10) {
                             info("Yawning...")
                             showRed()
-                            sendMessage()
+                            sendMessage("Stop yawning!!")
                         } else {
                             hideRed()
                         }
 
                     } else {
                         hideRed()
+                    }
+
+                    // Check eye diff
+                    val leftEye = face.getContour(FirebaseVisionFaceContour.LEFT_EYE)
+                    val leftEyeTop = leftEye.points[4]
+                    val leftEyeBottom = leftEye.points[12]
+                    val leftEyeDistance = getDistance(leftEyeTop, leftEyeBottom)
+
+
+                    val rightEye = face.getContour(FirebaseVisionFaceContour.RIGHT_EYE)
+                    val rightEyeTop = rightEye.points[4]
+                    val rightEyeBottom = rightEye.points[12]
+                    val rightEyeDistance = getDistance(rightEyeTop, rightEyeBottom)
+
+                    info("Eye distance : $leftEyeDistance : $rightEyeDistance")
+
+                    if (leftEyeDistance <= 6 && rightEyeDistance <= 6) {
+                        if (eyeClosedTime == -1L) {
+                            info("Sleeping tracking started")
+                            eyeClosedTime = System.currentTimeMillis()
+                        }
+
+                        if (eyeClosedTime != -1L) {
+                            // tracking active
+                            val diff = System.currentTimeMillis() - eyeClosedTime
+                            if (diff > 2000) {
+                                info("Sleeping...")
+                                showRed()
+                                sendMessage("Stop sleeping!!")
+                            }
+                        }
+
+
+                    } else {
+                        hideRed()
+                        if (eyeClosedTime != -1L) {
+                            info("Sleeping tracking stopped")
+                            eyeClosedTime = -1
+                        }
                     }
 
                 }
@@ -194,8 +231,10 @@ class MainActivity : AppCompatActivity() {
             }
     }
 
-    private fun sendMessage() {
-        MokoSupport.getInstance().sendOrder(
+    private var eyeClosedTime: Long = -1
+
+    private fun sendMessage(message: String) {
+        /*MokoSupport.getInstance().sendOrder(
             ZWriteCommonMessageTask(
                 object : MokoOrderTaskCallback {
                     override fun onOrderResult(response: OrderTaskResponse?) {
@@ -208,10 +247,10 @@ class MainActivity : AppCompatActivity() {
                     }
                 },
                 false,
-                "ALERT!\nStop yawning!!",
+                "ALERT!\n$message",
                 true
             )
-        )
+        )*/
     }
 
     private fun showRed() {
