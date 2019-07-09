@@ -204,22 +204,24 @@ class MainActivity : AppCompatActivity() {
                     val upperLipTop = face.getContour(FirebaseVisionFaceContour.UPPER_LIP_TOP)
                     val lowerLipBottom = face.getContour(FirebaseVisionFaceContour.LOWER_LIP_BOTTOM)
 
-                    val lipDistance = getDistance(upperLipTop, lowerLipBottom)
-                    info("Lip distance $lipDistance")
-                    if (lipDistance > 50) {
+                    if (upperLipTop.points.size == 11 && lowerLipBottom.points.size == 9) {
+                        val lipDistance = getDistance(upperLipTop, lowerLipBottom)
+                        info("Lip distance $lipDistance")
+                        if (lipDistance > 50) {
 
-                        info("Eye distance : $leftEyeDistance : $rightEyeDistance")
+                            info("Eye distance : $leftEyeDistance : $rightEyeDistance")
 
-                        if (leftEyeDistance < 6 || rightEyeDistance < 6) {
-                            info("Yawning...")
-                            showOrange()
-                            sendMessage("Stop yawning!!")
+                            if (leftEyeDistance < 6 || rightEyeDistance < 6) {
+                                info("Yawning...")
+                                showOrange()
+                                sendMessage("Stop yawning!!")
+                            } else {
+                                hideWarning()
+                            }
+
                         } else {
                             hideWarning()
                         }
-
-                    } else {
-                        hideWarning()
                     }
 
                 }
@@ -287,8 +289,8 @@ class MainActivity : AppCompatActivity() {
         x: FirebaseVisionFaceContour,
         y: FirebaseVisionFaceContour
     ): Float {
-        val x1 = x.points[4]
-        val x2 = x.points[5]
+        val x1 = x.points[5]
+        val x2 = x.points[6]
         val y1 = y.points[4]
         val y2 = y.points[5]
 
