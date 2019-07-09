@@ -1,0 +1,2 @@
+include ':app', ':fitpolosupport'
+rootProject.name='MLKit-Sample'

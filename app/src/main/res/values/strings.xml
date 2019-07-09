@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">MLKit-Sample</string>
+    <string name="action_settings">Settings</string>
+    <string name="enable_permissions">Please grant permission</string>
+</resources>
