@@ -9,7 +9,13 @@ import android.os.Bundle
 import android.util.SparseIntArray
 import android.view.Surface
 import android.view.View
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import com.fitpolo.support.MokoSupport
+import com.fitpolo.support.callback.MokoOrderTaskCallback
+import com.fitpolo.support.entity.OrderTaskResponse
+import com.fitpolo.support.task.ZWriteCommonMessageTask
 import com.google.firebase.ml.vision.FirebaseVision
 import com.google.firebase.ml.vision.common.FirebaseVisionImage
 import com.google.firebase.ml.vision.common.FirebaseVisionImageMetadata
@@ -26,6 +32,7 @@ import com.theapache64.twinkill.logger.mistake
 class MainActivity : AppCompatActivity() {
 
     private var vRed: View? = null
+    private var tvLabel: TextView? = null
     private val cameraManager by lazy {
         getSystemService(Context.CAMERA_SERVICE) as CameraManager
     }
@@ -115,6 +122,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         vRed = findViewById<View>(R.id.v_red)
+        tvLabel = findViewById(R.id.tv_label)
         val cameraView = findViewById<CameraView>(R.id.camera)
 
         cameraView.setLifecycleOwner(this)
@@ -151,39 +159,6 @@ class MainActivity : AppCompatActivity() {
                     val rotY = face.headEulerAngleY // Head is rotated to the right rotY degrees
                     val rotZ = face.headEulerAngleZ // Head is tilted sideways rotZ degrees
 
-                    val upperLipTop = face.getContour(FirebaseVisionFaceContour.UPPER_LIP_TOP)
-                    val lowerLipBottom = face.getContour(FirebaseVisionFaceContour.LOWER_LIP_BOTTOM)
-
-                    val lipDistance = getDistance(upperLipTop, lowerLipBottom)
-                    info("Lip distance $lipDistance")
-                    if (lipDistance > 50) {
-
-                        // Check eye diff
-                        val leftEye = face.getContour(FirebaseVisionFaceContour.LEFT_EYE)
-                        val leftEyeTop = leftEye.points[4]
-                        val leftEyeBottom = leftEye.points[12]
-                        val leftEyeDistance = getDistance(leftEyeTop, leftEyeBottom)
-
-
-                        val rightEye = face.getContour(FirebaseVisionFaceContour.RIGHT_EYE)
-                        val rightEyeTop = rightEye.points[4]
-                        val rightEyeBottom = rightEye.points[12]
-                        val rightEyeDistance = getDistance(rightEyeTop, rightEyeBottom)
-
-                        info("Eye distance : $leftEyeDistance : $rightEyeDistance")
-
-                        if (leftEyeDistance < 10 && rightEyeDistance < 10) {
-                            info("Yawning...")
-                            showRed()
-                            sendMessage("Stop yawning!!")
-                        } else {
-                            hideRed()
-                        }
-
-                    } else {
-                        hideRed()
-                    }
-
                     // Check eye diff
                     val leftEye = face.getContour(FirebaseVisionFaceContour.LEFT_EYE)
                     val leftEyeTop = leftEye.points[4]
@@ -198,7 +173,7 @@ class MainActivity : AppCompatActivity() {
 
                     info("Eye distance : $leftEyeDistance : $rightEyeDistance")
 
-                    if (leftEyeDistance <= 6 && rightEyeDistance <= 6) {
+                    if (leftEyeDistance <= 6 || rightEyeDistance <= 6) {
                         if (eyeClosedTime == -1L) {
                             info("Sleeping tracking started")
                             eyeClosedTime = System.currentTimeMillis()
@@ -211,16 +186,40 @@ class MainActivity : AppCompatActivity() {
                                 info("Sleeping...")
                                 showRed()
                                 sendMessage("Stop sleeping!!")
+                                continue
                             }
                         }
 
 
                     } else {
-                        hideRed()
+                        hideWarning()
                         if (eyeClosedTime != -1L) {
                             info("Sleeping tracking stopped")
                             eyeClosedTime = -1
                         }
+                    }
+
+
+                    // Yawn check
+                    val upperLipTop = face.getContour(FirebaseVisionFaceContour.UPPER_LIP_TOP)
+                    val lowerLipBottom = face.getContour(FirebaseVisionFaceContour.LOWER_LIP_BOTTOM)
+
+                    val lipDistance = getDistance(upperLipTop, lowerLipBottom)
+                    info("Lip distance $lipDistance")
+                    if (lipDistance > 50) {
+
+                        info("Eye distance : $leftEyeDistance : $rightEyeDistance")
+
+                        if (leftEyeDistance < 6 || rightEyeDistance < 6) {
+                            info("Yawning...")
+                            showOrange()
+                            sendMessage("Stop yawning!!")
+                        } else {
+                            hideWarning()
+                        }
+
+                    } else {
+                        hideWarning()
                     }
 
                 }
@@ -234,7 +233,7 @@ class MainActivity : AppCompatActivity() {
     private var eyeClosedTime: Long = -1
 
     private fun sendMessage(message: String) {
-        /*MokoSupport.getInstance().sendOrder(
+        MokoSupport.getInstance().sendOrder(
             ZWriteCommonMessageTask(
                 object : MokoOrderTaskCallback {
                     override fun onOrderResult(response: OrderTaskResponse?) {
@@ -250,14 +249,27 @@ class MainActivity : AppCompatActivity() {
                 "ALERT!\n$message",
                 true
             )
-        )*/
+        )
     }
 
     private fun showRed() {
-        runOnUiThread { vRed!!.visibility = View.VISIBLE }
+        runOnUiThread {
+            tvLabel!!.text = "SLEEPING!!"
+            vRed!!.setBackgroundColor(ContextCompat.getColor(this, R.color.red_trans))
+            vRed!!.visibility = View.VISIBLE
+        }
     }
 
-    private fun hideRed() {
+    private fun showOrange() {
+        runOnUiThread {
+            tvLabel!!.text = "YAWNING!!"
+            vRed!!.setBackgroundColor(ContextCompat.getColor(this, R.color.orange_trans))
+            vRed!!.visibility = View.VISIBLE
+        }
+    }
+
+
+    private fun hideWarning() {
         runOnUiThread {
             vRed!!.visibility = View.GONE
         }

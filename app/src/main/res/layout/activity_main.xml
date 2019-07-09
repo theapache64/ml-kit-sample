@@ -18,7 +18,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <View
+    <FrameLayout
         android:id="@+id/v_red"
         android:layout_width="0dp"
         android:layout_height="0dp"
@@ -27,6 +27,18 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent">
+
+        <TextView
+            android:id="@+id/tv_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="dfgsdgsdfgf"
+            android:textColor="@android:color/white"
+            android:textSize="50sp"
+            tools:text="@tools:sample/lorem" />
+
+    </FrameLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
